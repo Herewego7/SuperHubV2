@@ -1,0 +1,288 @@
+name: SuperHub
+
+options:
+  bundleIdPrefix: com.herewego7
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+    TARGETED_DEVICE_FAMILY: "1"
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    DEAD_CODE_STRIPPING: YES
+
+packages:
+  BotLifeKit:
+    path: ../vendor/bot-life/ios/Packages/BotLifeKit
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    from: 12.19.2
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    from: 10.0.0
+  CapApp:
+    path: ../vendor/family-hub/artifacts/family-hub/ios/App/CapApp-SPM
+
+configFiles:
+  Debug: ../vendor/bot-life/ios/Config/Base.xcconfig
+  Release: ../vendor/bot-life/ios/Config/Base.xcconfig
+
+targets:
+  SuperHub:
+    type: application
+    platform: iOS
+    sources:
+      - path: SuperHub
+        excludes:
+          - Resources/public
+          - FamilyHubHost.swift
+      - path: SuperHub/Resources/public
+        type: folder
+        buildPhase: resources
+      - path: ../vendor/bot-life/ios/App
+        excludes:
+          - BotLifeApp.swift
+          - Info.plist
+          - BotLife.entitlements
+      - path: ../vendor/bot-life/ios/Shared
+      - path: ../vendor/bot-life/fixtures/demo-household.json
+        buildPhase: resources
+    dependencies:
+      - package: BotLifeKit
+        product: BotLifeCore
+      - package: BotLifeKit
+        product: BotLifeDesign
+      - package: Firebase
+        product: FirebaseAuth
+      - package: Firebase
+        product: FirebaseFirestore
+      - package: Firebase
+        product: FirebaseFunctions
+      - package: Firebase
+        product: FirebaseStorage
+      - package: GoogleSignIn
+        product: GoogleSignIn
+      - package: CapApp
+        product: CapApp-SPM
+      - target: SuperHubFamily
+        embed: true
+      - target: SuperHubWidgets
+      - target: SuperHubShare
+    preBuildScripts:
+      - name: Host Bot Life sources
+        basedOnDependencyAnalysis: false
+        script: |
+          /bin/sh "${SRCROOT}/../scripts/host-botlife-sources.sh"
+      - name: Copy Family Hub web
+        basedOnDependencyAnalysis: false
+        script: |
+          set -eu
+          dest="${SRCROOT}/SuperHub/Resources/public"
+          src="${SRCROOT}/../vendor/family-hub/artifacts/family-hub/dist/public"
+          mkdir -p "$dest"
+          if [ -f "$src/index.html" ]; then
+            /usr/bin/rsync -a --delete "$src/" "$dest/"
+          fi
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.herewego7.superhub
+        PRODUCT_NAME: SuperHub
+        SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ENABLE_PREVIEWS: YES
+    info:
+      path: SuperHub/Info.plist
+      properties:
+        CFBundleDisplayName: SuperHub
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        ITSAppUsesNonExemptEncryption: false
+        LSRequiresIPhoneOS: true
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UIRequiresFullScreen: true
+        UIViewControllerBasedStatusBarAppearance: true
+        UIBackgroundModes:
+          - fetch
+          - remote-notification
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.herewego7.botlife.calendars
+        CFBundleURLTypes:
+          - CFBundleURLName: com.herewego7.superhub.botlife
+            CFBundleURLSchemes:
+              - botlife
+          - CFBundleURLName: com.herewego7.superhub.familyhub
+            CFBundleURLSchemes:
+              - familyhub
+          - CFBundleURLName: google-sign-in
+            CFBundleURLSchemes:
+              - $(GOOGLE_URL_SCHEME)
+        GIDClientID: $(GOOGLE_IOS_CLIENT_ID)
+        GIDServerClientID: $(GOOGLE_SERVER_CLIENT_ID)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSCalendarsFullAccessUsageDescription: Bot Life shows events from the calendars you pick on your plan, and adds the events you ask it to.
+        NSCalendarsWriteOnlyAccessUsageDescription: Bot Life adds the key dates you check to your calendar.
+        NSCameraUsageDescription: Family Hub uses the camera for a profile photo. Bot Life uses it to scan flyers and forms.
+        NSPhotoLibraryUsageDescription: Family Hub reads your photo library for a profile picture. Bot Life reads it for flyers.
+        NSPhotoLibraryAddUsageDescription: Family Hub saves photos to your library when you export content.
+        NSFaceIDUsageDescription: Lock Bot Life with Face ID.
+        NSLocationWhenInUseUsageDescription: Family Hub can use your location to show local weather on the home screen.
+        NSUserNotificationsUsageDescription: Family Hub sends reminders for chores, health events, and family announcements.
+    entitlements:
+      path: SuperHub/SuperHub.entitlements
+      properties:
+        aps-environment: development
+        com.apple.developer.applesignin:
+          - Default
+        com.apple.developer.usernotifications.time-sensitive: true
+        com.apple.developer.weatherkit: true
+        com.apple.security.application-groups:
+          - group.com.herewego7.botlife
+
+  SuperHubFamily:
+    type: framework
+    platform: iOS
+    sources:
+      - path: SuperHub/FamilyHubHost.swift
+      - path: ../vendor/family-hub/artifacts/family-hub/ios/App/App/ViewController.swift
+      - path: ../vendor/family-hub/artifacts/family-hub/ios/App/App/WebAuthPlugin.swift
+      - path: ../vendor/family-hub/artifacts/family-hub/ios/App/App/AppleSignInPlugin.swift
+      - path: ../vendor/family-hub/artifacts/family-hub/ios/App/App/StoreKitPurchasePlugin.swift
+    dependencies:
+      - package: CapApp
+        product: CapApp-SPM
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.herewego7.superhub.family
+        GENERATE_INFOPLIST_FILE: YES
+        SKIP_INSTALL: YES
+        SWIFT_VERSION: "5.0"
+
+  SuperHubWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ../vendor/bot-life/ios/Widgets
+        excludes:
+          - Info.plist
+          - "*.entitlements"
+      - path: ../vendor/bot-life/ios/Shared
+    dependencies:
+      - package: BotLifeKit
+        product: BotLifeCore
+      - package: BotLifeKit
+        product: BotLifeDesign
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.herewego7.superhub.widgets
+        PRODUCT_NAME: SuperHubWidgets
+        SKIP_INSTALL: YES
+    info:
+      path: SuperHub/WidgetsInfo.plist
+      properties:
+        CFBundleDisplayName: SuperHub
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    entitlements:
+      path: SuperHubWidgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.herewego7.botlife
+
+  SuperHubShare:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: ../vendor/bot-life/ios/ShareExtension
+        excludes:
+          - Info.plist
+          - "*.entitlements"
+      - path: ../vendor/bot-life/ios/Shared
+    dependencies:
+      - package: BotLifeKit
+        product: BotLifeCore
+      - package: BotLifeKit
+        product: BotLifeDesign
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.herewego7.superhub.share
+        PRODUCT_NAME: SuperHubShare
+        SKIP_INSTALL: YES
+    info:
+      path: SuperHub/ShareInfo.plist
+      properties:
+        CFBundleDisplayName: SuperHub
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsText: true
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+              NSExtensionActivationSupportsImageWithMaxCount: 5
+              NSExtensionActivationSupportsFileWithMaxCount: 3
+    entitlements:
+      path: SuperHubShare.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.herewego7.botlife
+
+  SuperHubTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: SuperHubTests
+    dependencies:
+      - target: SuperHub
+      - target: SuperHubFamily
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.herewego7.superhub.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/SuperHub.app/SuperHub"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+  SuperHubUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: SuperHubUITests
+    dependencies:
+      - target: SuperHub
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.herewego7.superhub.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: SuperHub
+
+schemes:
+  SuperHub:
+    build:
+      targets:
+        SuperHub: all
+        SuperHubTests: [test]
+        SuperHubUITests: [test]
+    test:
+      targets:
+        - SuperHubTests
+        - SuperHubUITests

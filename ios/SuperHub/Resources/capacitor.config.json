@@ -1,0 +1,13 @@
+{
+  "appId": "com.herewego7.superhub",
+  "appName": "SuperHub",
+  "webDir": "public",
+  "ios": {
+    "contentInset": "never"
+  },
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  }
+}

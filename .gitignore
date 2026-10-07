@@ -1,0 +1,7 @@
+ios/SuperHub.xcodeproj
+ios/SuperHub/Generated
+ios/SuperHub/Resources/public
+vendor/family-hub/node_modules
+vendor/family-hub/**/dist
+.DS_Store
+DerivedData

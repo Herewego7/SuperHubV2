@@ -1,0 +1,6 @@
+[submodule "vendor/bot-life"]
+	path = vendor/bot-life
+	url = https://github.com/Herewego7/BotLife.git
+[submodule "vendor/family-hub"]
+	path = vendor/family-hub
+	url = https://github.com/Herewego7/G-Cal-3app-test.git
